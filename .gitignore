@@ -34,3 +34,6 @@ desktop.ini
 
 # Temp
 *.tmp
+
+# Documentation (Local only)
+DOCUMENTATION.md
