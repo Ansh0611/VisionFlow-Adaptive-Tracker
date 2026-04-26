@@ -4,15 +4,19 @@
     --muted: #666666;
     --border: #eaeaea;
     --accent: #2563eb;
+    --grid-line: rgba(37, 99, 235, 0.07);
+    --grid-dot: rgba(37, 99, 235, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #121212;
-        --text: #e5e5e5;
-        --muted: #a3a3a3;
-        --border: #333333;
-        --accent: #60a5fa;
+        --bg: #0d1117;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --border: #30363d;
+        --accent: #58a6ff;
+        --grid-line: rgba(88, 166, 255, 0.05);
+        --grid-dot: rgba(88, 166, 255, 0.1);
     }
 }
 
@@ -23,60 +27,95 @@ body {
     background-color: var(--bg);
     color: var(--text);
     line-height: 1.7;
-    max-width: 700px;
+    
+    /* Scientific Blueprint / Graph Paper Background */
+    background-image: 
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px, 40px 40px;
+    background-position: -1px -1px, -1px -1px, 19px 19px;
+    
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 750px;
     margin: 0 auto;
     padding: 60px 20px;
+    background: var(--bg);
+    box-shadow: 0 0 40px 40px var(--bg); /* Blends the content area smoothly into the background */
+    border-radius: 20px;
 }
 
 .header {
-    margin-bottom: 50px;
+    text-align: center;
+    margin-bottom: 70px;
+    padding-bottom: 30px;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 20px;
 }
 
 .site-title a {
-    font-size: 28px;
+    font-size: clamp(3rem, 6vw, 4.5rem);
     font-weight: 800;
     color: var(--text);
     text-decoration: none;
-    letter-spacing: -0.5px;
+    letter-spacing: -2px;
+    display: block;
+    line-height: 1.1;
+    margin-bottom: 10px;
 }
 
 .site-desc {
-    color: var(--muted);
-    margin-top: 5px;
-    font-size: 16px;
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-family: monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .post-list {
     list-style: none;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 .post-list li {
     margin-bottom: 35px;
+    text-align: center;
 }
 
 .post-link {
     text-decoration: none;
     color: inherit;
     display: block;
+    padding: 15px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
 
 .post-link h2 {
-    font-size: 22px;
-    color: var(--accent);
+    font-size: 24px;
+    color: var(--text);
     margin-bottom: 5px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
 }
 
 .post-link p {
     color: var(--muted);
     font-size: 15px;
+    font-family: monospace;
+}
+
+.post-link:hover {
+    border-color: var(--border);
+    background: rgba(128, 128, 128, 0.02);
 }
 
 .post-link:hover h2 {
-    text-decoration: underline;
+    color: var(--accent);
 }
 
 .hidden { display: none !important; }
@@ -84,29 +123,36 @@ body {
 .back-btn {
     background: none;
     border: none;
-    color: var(--muted);
+    color: var(--accent);
     font-size: 15px;
+    font-family: monospace;
     cursor: pointer;
-    margin-bottom: 30px;
-    font-family: inherit;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .back-btn:hover {
-    color: var(--text);
     text-decoration: underline;
 }
 
+.post-content {
+    text-align: left;
+}
+
 .post-content h1, .post-content h2, .post-content h3 {
-    margin-top: 35px;
+    margin-top: 40px;
     margin-bottom: 15px;
     color: var(--text);
-    font-weight: 600;
-    letter-spacing: -0.3px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
 }
 
 .post-content p {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
     color: var(--text);
+    font-size: 1.05rem;
 }
 
 .post-content code {
@@ -119,10 +165,10 @@ body {
 
 .post-content pre {
     background: var(--border);
-    padding: 15px;
-    border-radius: 6px;
+    padding: 20px;
+    border-radius: 8px;
     overflow-x: auto;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .post-content pre code {

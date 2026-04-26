@@ -4,55 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VisionFlow Blog</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="header">
-        <h1 class="site-title"><a href="#" id="home-link">VisionFlow Blog</a></h1>
-        <p class="site-desc">Insights from the Adaptive Tracker team.</p>
-    </header>
+    <div class="container">
+        <header class="header">
+            <h1 class="site-title"><a href="#" id="home-link">VisionFlow</a></h1>
+            <p class="site-desc">Adaptive Tracker Research</p>
+        </header>
 
-    <main id="main-content">
-        <!-- Home View: List of Posts -->
-        <div id="home-view">
-            <ul class="post-list">
-                <li>
-                    <a href="#" class="post-link" data-author="lakshit-mehta">
-                        <h2>The Mathematics of Pursuit</h2>
-                        <p>Lakshit Mehta — Algorithmic Architecture</p>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="post-link" data-author="siddhi-pateriya">
-                        <h2>Reconstructing the Unseen</h2>
-                        <p>Siddhi Pateriya — Pose Estimation</p>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="post-link" data-author="chirag-taneja">
-                        <h2>An Adaptive Architecture</h2>
-                        <p>Chirag Taneja — System Design</p>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="post-link" data-author="ansh-sidana">
-                        <h2>The First Decision</h2>
-                        <p>Ansh Sidana — Motion Analysis</p>
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <main id="main-content">
+            <!-- Home View: List of Posts -->
+            <div id="home-view">
+                <ul class="post-list">
+                    <li>
+                        <a href="#" class="post-link" data-author="lakshit-mehta">
+                            <h2>The Mathematics of Pursuit</h2>
+                            <p>Lakshit Mehta</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="post-link" data-author="siddhi-pateriya">
+                            <h2>Reconstructing the Unseen</h2>
+                            <p>Siddhi Pateriya</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="post-link" data-author="chirag-taneja">
+                            <h2>An Adaptive Architecture</h2>
+                            <p>Chirag Taneja</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="post-link" data-author="ansh-sidana">
+                            <h2>The First Decision</h2>
+                            <p>Ansh Sidana</p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
 
-        <!-- Post View -->
-        <div id="post-view" class="hidden">
-            <button id="back-btn" class="back-btn">← Back to posts</button>
-            <article id="post-content" class="post-content">
-                <!-- Markdown rendered here -->
-            </article>
-        </div>
-    </main>
+            <!-- Post View -->
+            <div id="post-view" class="hidden">
+                <button id="back-btn" class="back-btn">← Return to Index</button>
+                <article id="post-content" class="post-content">
+                    <!-- Markdown rendered here -->
+                </article>
+            </div>
+        </main>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
