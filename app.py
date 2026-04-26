@@ -391,20 +391,30 @@ if uploaded is not None:
             cv2.putText(annotated, f"Frame {frame_idx}/{total_frames}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
             # Frame Composite
-            vid_resized = cv2.resize(annotated, (int(width * traj_h / height), traj_h))
-            combined = np.hstack([vid_resized, live_canvas])
+            # Downscale for faster network transmission to ensure "live" feel
+            display_h = 480
+            display_w_vid = int(width * display_h / height)
+            
+            vid_small = cv2.resize(annotated, (display_w_vid, display_h))
+            canvas_small = cv2.resize(live_canvas, (display_h, display_h)) # square canvas
+            
+            combined = np.hstack([vid_small, canvas_small])
             combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
             
-            # Explicitly update the image and a text status to force websocket sync
-            img_display.image(combined_rgb, channels="RGB", use_container_width=True, caption=f"Processing Frame: {frame_idx}")
+            # Use a unique key per update if possible, or just ensure caption changes
+            img_display.image(
+                combined_rgb, 
+                channels="RGB", 
+                use_container_width=True, 
+                caption=f"⚡ LIVE ENGINE | Frame {frame_idx}/{total_frames} | Motion: {motion_mag:.1f}"
+            )
             
-            # Update progress bar less frequently
+            # Update progress bar
             if frame_idx % 20 == 0:
-                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"🚀 Live Engine: {frame_idx}/{total_frames} frames processed...")
+                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Processing: {frame_idx}/{total_frames}")
             
-            # Use a longer sleep to ensure Streamlit Cloud flushes the output buffer to the browser
             import time
-            time.sleep(0.1) # 10 FPS cap for better stability over network
+            time.sleep(0.05) 
 
         cap.release()
         os.remove(tfile.name)
