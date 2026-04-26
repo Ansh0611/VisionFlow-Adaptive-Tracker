@@ -402,11 +402,29 @@ if uploaded is not None:
 
             # Frame Composite
             vid_resized = cv2.resize(annotated, (int(width * traj_h / height), traj_h))
+            
+            # Use global canvas for live view so trajectories grow over time
+            if not is_moving:
+                # Blend active tracks on top of the global history for better live feedback
+                live_view_canvas = global_obj_canvas.copy()
+                # Draw active heads (dots) on top
+                for t in tracker.tracks:
+                    if len(t.trajectory) > 0:
+                        cp = t.trajectory[-1]
+                        cpt = (int(cp[0]*scale_x), int(cp[1]*scale_y))
+                        cv2.circle(live_view_canvas, cpt, 4, t.color, -1)
+                current_canvas = live_view_canvas
+
             combined = np.hstack([vid_resized, current_canvas])
             combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
             
             img_display.image(combined_rgb, channels="RGB", use_container_width=True)
             progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Rendering: {frame_idx}/{total_frames}")
+            
+            # Small delay to prevent Streamlit Cloud from batching too many updates
+            # and to allow the browser to render each frame.
+            import time
+            time.sleep(0.01)
 
         cap.release()
         os.remove(tfile.name)
