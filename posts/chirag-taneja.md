@@ -1,3 +1,5 @@
+### Designing an Intelligent Architecture
+
 Most computer vision applications are highly specialized: a tracker tracks, and an odometry system maps. The core design challenge of the VisionFlow Adaptive Tracker was to build a unified architecture that can intelligently switch between these two paradigms based on real-time environmental context. We wanted a system that "thinks before it sees."
 
 To achieve this, we implemented a continuous motion analysis layer that evaluates the camera's state on every frame. Based on this assessment, the frame is dynamically routed to either the multi-object tracking pipeline or the visual odometry pipeline. 

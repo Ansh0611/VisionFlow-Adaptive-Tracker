@@ -1,3 +1,5 @@
+### Analyzing the Visual Scene
+
 Before VisionFlow can track an object or map a trajectory, it must answer one fundamental question: Is the camera moving, or is the world moving? This initial classification is the foundation upon which our entire adaptive pipeline rests. 
 
 To determine camera stability, we utilize sparse optical flow to analyze the motion of key features across the scene. The critical design choice here is our aggregation strategy. Rather than taking the mean displacement of features, which could be skewed by a single fast-moving object like a passing car, we calculate the median displacement. The median is highly robust to outliers; if the camera is stable, the vast majority of background features will have zero displacement, keeping the median low regardless of foreground activity.

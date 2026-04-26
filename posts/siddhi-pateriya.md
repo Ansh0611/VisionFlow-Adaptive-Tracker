@@ -1,3 +1,5 @@
+### Uncovering 3D Trajectories
+
 When the VisionFlow system detects that the camera itself is moving, object tracking becomes unreliable because the entire background is shifting. To handle this, we switch to Monocular Visual Odometry (VO), a fascinating technique that estimates the camera's trajectory through 3D space using only a sequence of 2D images. 
 
 The pipeline begins by identifying strong visual anchors in the environment. We use the Shi-Tomasi corner detector to find distinct features like edges of buildings or textured surfaces. We then track these features across consecutive frames using the Lucas-Kanade optical flow algorithm, which calculates the apparent motion of these points as the camera moves.

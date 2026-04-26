@@ -1,3 +1,5 @@
+### The Mathematical Core
+
 The core of our multi-object tracking pipeline in VisionFlow Adaptive Tracker relies on two powerful, classical algorithms: the Kalman Filter and the Hungarian Algorithm. While deep learning models excel at object detection, classical methods offer mathematical guarantees and real-time efficiency that neural networks often struggle to match. 
 
 The Kalman Filter acts as the predictive engine. For every tracked object, it maintains a state vector containing both position and velocity. In each frame, it predicts where the object will move next. When new detections arrive, the filter updates its estimate, balancing its own prediction against the new measurement based on calculated uncertainties. This allows us to track objects smoothly even when they are temporarily obscured or moving erratically.
