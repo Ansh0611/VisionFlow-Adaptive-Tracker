@@ -1,0 +1,7 @@
+Before VisionFlow can track an object or map a trajectory, it must answer one fundamental question: Is the camera moving, or is the world moving? This initial classification is the foundation upon which our entire adaptive pipeline rests. 
+
+To determine camera stability, we utilize sparse optical flow to analyze the motion of key features across the scene. The critical design choice here is our aggregation strategy. Rather than taking the mean displacement of features, which could be skewed by a single fast-moving object like a passing car, we calculate the median displacement. The median is highly robust to outliers; if the camera is stable, the vast majority of background features will have zero displacement, keeping the median low regardless of foreground activity.
+
+Once the camera is classified as stable, we must separate moving subjects from the background. For this, we utilize the MOG2 (Mixture of Gaussians) algorithm. MOG2 models the recent history of each pixel as a distribution, allowing it to adapt to gradual lighting changes while flagging sudden anomalies as foreground objects. 
+
+The raw foreground masks are often noisy, so we apply morphological operations—opening and closing—to clean up the shapes before contour detection. By carefully tuning parameters like contour area limits and background learning rates, this motion analysis layer provides a pristine, intelligent assessment of the scene, ensuring the downstream algorithms operate on accurate assumptions.

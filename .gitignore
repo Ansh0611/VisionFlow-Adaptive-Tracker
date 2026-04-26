@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+.env/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Videos & large datasets
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+*.tar.gz
+
+# Output logs
+*.txt
+!requirements.txt
+
+# Temp
+*.tmp

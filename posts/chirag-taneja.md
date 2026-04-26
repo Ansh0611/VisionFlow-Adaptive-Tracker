@@ -1,0 +1,7 @@
+Most computer vision applications are highly specialized: a tracker tracks, and an odometry system maps. The core design challenge of the VisionFlow Adaptive Tracker was to build a unified architecture that can intelligently switch between these two paradigms based on real-time environmental context. We wanted a system that "thinks before it sees."
+
+To achieve this, we implemented a continuous motion analysis layer that evaluates the camera's state on every frame. Based on this assessment, the frame is dynamically routed to either the multi-object tracking pipeline or the visual odometry pipeline. 
+
+The primary architectural hurdle was state persistence. When the camera transitions from moving back to a stable state, the object tracker cannot simply start from scratch; it must resume with its historical knowledge intact. We solved this by ensuring both pipelines maintain their internal states continuously, pausing their processing rather than destroying their instances when inactive. 
+
+Furthermore, we unified the outputs onto a single interactive canvas using Streamlit. This required careful coordinate management, especially for the visual odometry trajectory, which can grow indefinitely and requires dynamic canvas auto-shifting. By prioritizing classical computer vision algorithms over deep learning, we ensured the system remains lightweight, interpretable, and capable of running in real-time on standard CPU hardware. The result is an adaptive architecture that handles complex real-world scenarios gracefully.
