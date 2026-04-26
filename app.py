@@ -395,15 +395,16 @@ if uploaded is not None:
             combined = np.hstack([vid_resized, live_canvas])
             combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
             
-            # Use a more explicit update to force Streamlit to refresh
-            img_display.image(combined_rgb, channels="RGB", use_container_width=True)
+            # Explicitly update the image and a text status to force websocket sync
+            img_display.image(combined_rgb, channels="RGB", use_container_width=True, caption=f"Processing Frame: {frame_idx}")
             
-            # Update progress bar less frequently to save UI bandwidth
-            if frame_idx % 10 == 0:
-                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Processing: {frame_idx}/{total_frames} frames")
+            # Update progress bar less frequently
+            if frame_idx % 20 == 0:
+                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"🚀 Live Engine: {frame_idx}/{total_frames} frames processed...")
             
+            # Use a longer sleep to ensure Streamlit Cloud flushes the output buffer to the browser
             import time
-            time.sleep(0.02) # Slightly longer sleep to ensure network/browser sync
+            time.sleep(0.1) # 10 FPS cap for better stability over network
 
         cap.release()
         os.remove(tfile.name)
