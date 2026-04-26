@@ -291,6 +291,9 @@ if uploaded is not None:
 
         frame_idx = 0
         max_active = 0
+        
+        # Increase motion threshold to be less sensitive to minor shakes
+        motion_detector = CameraMotionDetector(threshold=3.0) 
 
         while True:
             ret, frame = cap.read()
@@ -298,17 +301,21 @@ if uploaded is not None:
                 break
             frame_idx += 1
 
-            if frame_skip > 1 and frame_idx % frame_skip != 0:
+            # Skip every other frame to speed up processing and improve live playback feel
+            if frame_idx % 2 != 0:
                 continue
 
             # 1. Detect Motion
             is_moving, motion_mag = motion_detector.is_moving(frame)
 
             annotated = frame.copy()
-            current_canvas = np.zeros_like(vo_canvas) 
+            
+            # Setup canvases for this frame
+            scale_x = traj_w / width
+            scale_y = traj_h / height
 
             if is_moving:
-                # ── MOVING CAMERA MODE ──
+                # ── MOVING CAMERA MODE (Visual Odometry) ──
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 pos, p_old, p_new = vo.process_frame(gray)
                 
@@ -325,7 +332,6 @@ if uploaded is not None:
                 shift_x = shift_y = 0
                 if draw_x < margin: shift_x = margin + 50 - draw_x
                 elif draw_x > traj_w - margin: shift_x = (traj_w - margin - 50) - draw_x
-                
                 if draw_y < margin: shift_y = margin + 50 - draw_y
                 elif draw_y > traj_h - margin: shift_y = (traj_h - margin - 50) - draw_y
                 
@@ -344,54 +350,38 @@ if uploaded is not None:
                     cv2.circle(vo_canvas, (draw_x, draw_y), 6, (0, 255, 0), 2)
                     cv2.putText(vo_canvas, 'START', (draw_x+8, draw_y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
                 
-                # Draw VO Path
                 cv2.circle(vo_canvas, (draw_x, draw_y), 2, (100, 255, 100), -1)
-
-                current_canvas = vo_canvas.copy()
-                cv2.putText(current_canvas, "Camera Trajectory", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                cv2.putText(current_canvas, f"X:{pos[0]:.2f} Z:{pos[2]:.2f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (150, 255, 150), 1)
-
+                
+                live_canvas = vo_canvas.copy()
+                cv2.putText(live_canvas, "Camera Trajectory (VO)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                 hud_status = f"MOVING ({motion_mag:.1f}px)"
                 hud_color = (0, 100, 255) 
-                
-                # Reset Tracker to avoid MOG2 contamination during movement
-                tracker.reset()
 
             else:
-                # ── STABLE CAMERA MODE ──
+                # ── STABLE CAMERA MODE (Object Tracking) ──
                 annotated, _, stats = tracker.process_frame(frame)
-                max_active = max(max_active, stats['active_tracks'])
-
-                obj_canvas = np.zeros((traj_h, traj_w, 3), dtype=np.uint8)
-                scale_x = traj_w / width
-                scale_y = traj_h / height
-
+                
+                # Accumulate the tracks into the global history
                 for t in tracker.tracks:
-                    trail = t.trajectory
-                    if len(trail) >= 2:
-                        pts = [(int(p[0]*scale_x), int(p[1]*scale_y)) for p in trail]
-                        cv2.polylines(obj_canvas, [np.array(pts)], False, t.color, 1, cv2.LINE_AA)
-                        
-                        # Accumulate the latest segment on the global map
-                        latest_pts = [(int(p[0]*scale_x), int(p[1]*scale_y)) for p in trail[-2:]]
+                    if len(t.trajectory) >= 2:
+                        latest_pts = [(int(p[0]*scale_x), int(p[1]*scale_y)) for p in t.trajectory[-2:]]
                         cv2.polylines(global_obj_canvas, [np.array(latest_pts)], False, t.color, 1, cv2.LINE_AA)
                         
-                        # Add ID label to global map once it has enough points
-                        if t.track_id not in labeled_ids and len(trail) > 10:
-                            label_pos = (int(trail[0][0]*scale_x), int(trail[0][1]*scale_y))
+                        if t.track_id not in labeled_ids and len(t.trajectory) > 10:
+                            label_pos = (int(t.trajectory[0][0]*scale_x), int(t.trajectory[0][1]*scale_y))
                             cv2.putText(global_obj_canvas, f"ID:{t.track_id}", (label_pos[0]+5, label_pos[1]-5),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, t.color, 1, cv2.LINE_AA)
                             labeled_ids.add(t.track_id)
-                        
-                    if len(trail) > 0:
-                        cp = trail[-1]
+
+                live_canvas = global_obj_canvas.copy()
+                # Draw active heads on top
+                for t in tracker.tracks:
+                    if len(t.trajectory) > 0:
+                        cp = t.trajectory[-1]
                         cpt = (int(cp[0]*scale_x), int(cp[1]*scale_y))
-                        cv2.circle(obj_canvas, cpt, 3, t.color, -1)
+                        cv2.circle(live_canvas, cpt, 5, t.color, -1)
 
-                current_canvas = obj_canvas.copy()
-                cv2.putText(current_canvas, "Object Trajectories", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                cv2.putText(current_canvas, f"Active: {stats['active_tracks']}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 150, 150), 1)
-
+                cv2.putText(live_canvas, "Object Trajectories (MOG2)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                 hud_status = f"STABLE ({motion_mag:.1f}px)"
                 hud_color = (100, 255, 100) 
                 
@@ -402,29 +392,18 @@ if uploaded is not None:
 
             # Frame Composite
             vid_resized = cv2.resize(annotated, (int(width * traj_h / height), traj_h))
-            
-            # Use global canvas for live view so trajectories grow over time
-            if not is_moving:
-                # Blend active tracks on top of the global history for better live feedback
-                live_view_canvas = global_obj_canvas.copy()
-                # Draw active heads (dots) on top
-                for t in tracker.tracks:
-                    if len(t.trajectory) > 0:
-                        cp = t.trajectory[-1]
-                        cpt = (int(cp[0]*scale_x), int(cp[1]*scale_y))
-                        cv2.circle(live_view_canvas, cpt, 4, t.color, -1)
-                current_canvas = live_view_canvas
-
-            combined = np.hstack([vid_resized, current_canvas])
+            combined = np.hstack([vid_resized, live_canvas])
             combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
             
+            # Use a more explicit update to force Streamlit to refresh
             img_display.image(combined_rgb, channels="RGB", use_container_width=True)
-            progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Rendering: {frame_idx}/{total_frames}")
             
-            # Small delay to prevent Streamlit Cloud from batching too many updates
-            # and to allow the browser to render each frame.
+            # Update progress bar less frequently to save UI bandwidth
+            if frame_idx % 10 == 0:
+                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Processing: {frame_idx}/{total_frames} frames")
+            
             import time
-            time.sleep(0.01)
+            time.sleep(0.02) # Slightly longer sleep to ensure network/browser sync
 
         cap.release()
         os.remove(tfile.name)
