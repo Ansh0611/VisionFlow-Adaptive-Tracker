@@ -1,10 +1,5 @@
 """
 Adaptive Trajectory Tracker — Streamlit Web Application
-===============================================
-Unified Live Application:
-  - Automatically detects camera motion.
-  - If Camera STABLE: Runs classical CV multi-object tracking (MOG2).
-  - If Camera MOVING: Runs Monocular Visual Odometry to map camera path.
 """
 
 import streamlit as st
@@ -13,6 +8,8 @@ import numpy as np
 import tempfile
 import os
 import sys
+import io
+from PIL import Image as PILImage
 
 # Ensure the root directory is in the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,15 +27,8 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
-
-.main {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-}
-
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+.main { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
 h1 {
     background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
     -webkit-background-clip: text;
@@ -46,12 +36,7 @@ h1 {
     font-weight: 700;
     font-size: 2.2rem !important;
 }
-
-h2, h3 {
-    color: #94a3b8 !important;
-    font-weight: 500;
-}
-
+h2, h3 { color: #94a3b8 !important; font-weight: 500; }
 .stButton > button {
     background: linear-gradient(135deg, #38bdf8, #818cf8) !important;
     color: white !important;
@@ -60,24 +45,15 @@ h2, h3 {
     font-weight: 600 !important;
     padding: 0.6rem 2rem !important;
     font-size: 1.05rem !important;
-    transition: all 0.3s ease !important;
     box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3) !important;
 }
-
-.stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5) !important;
-}
-
 .stat-card {
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid rgba(148, 163, 184, 0.1);
     border-radius: 12px;
     padding: 1rem;
     text-align: center;
-    backdrop-filter: blur(10px);
 }
-
 .stat-number {
     font-size: 2rem;
     font-weight: 700;
@@ -85,13 +61,7 @@ h2, h3 {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-
-.stat-label {
-    color: #94a3b8;
-    font-size: 0.85rem;
-    margin-top: 4px;
-}
-
+.stat-label { color: #94a3b8; font-size: 0.85rem; margin-top: 4px; }
 div[data-testid="stFileUploader"] {
     border: 2px dashed rgba(56, 189, 248, 0.3) !important;
     border-radius: 16px !important;
@@ -99,6 +69,7 @@ div[data-testid="stFileUploader"] {
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ── Monocular Visual Odometry Engine ────────────────────────
 class MonoVisualOdometry:
@@ -110,57 +81,54 @@ class MonoVisualOdometry:
         self.prev_gray = None
         self.prev_pts = None
         self.frame_idx = 0
-    
+
     def process_frame(self, gray_img):
         if self.frame_idx == 0:
             self.prev_pts = cv2.goodFeaturesToTrack(gray_img, maxCorners=1000, qualityLevel=0.01, minDistance=10)
             self.prev_gray = gray_img
             self.frame_idx += 1
             return self.t_total.ravel().copy(), None, None
-        
+
         if self.prev_pts is None or len(self.prev_pts) < 10:
             self.prev_pts = cv2.goodFeaturesToTrack(self.prev_gray, maxCorners=1000, qualityLevel=0.01, minDistance=10)
             if self.prev_pts is None or len(self.prev_pts) < 10:
                 return self.t_total.ravel().copy(), None, None
 
-        curr_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray_img, self.prev_pts, None)
-        
+        curr_pts, status, _ = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray_img, self.prev_pts, None)
         if curr_pts is None or status is None:
             return self.t_total.ravel().copy(), None, None
-            
+
         good_old = self.prev_pts[status == 1]
         good_new = curr_pts[status == 1]
-        
+
         if len(good_old) < 15:
             self.prev_pts = cv2.goodFeaturesToTrack(gray_img, maxCorners=1000, qualityLevel=0.01, minDistance=10)
             self.prev_gray = gray_img
             return self.t_total.ravel().copy(), None, None
-            
+
         E, mask = cv2.findEssentialMat(
-            good_new, good_old, 
-            focal=self.focal, pp=self.pp, 
+            good_new, good_old,
+            focal=self.focal, pp=self.pp,
             method=cv2.RANSAC, prob=0.999, threshold=1.0
         )
-        
         if E is not None and E.shape == (3, 3):
-            _, R, t, mask_pose = cv2.recoverPose(E, good_new, good_old, focal=self.focal, pp=self.pp, mask=mask)
-            scale = 1.0 
-            self.t_total = self.t_total + self.R_total @ (t * scale)
+            _, R, t, _ = cv2.recoverPose(E, good_new, good_old, focal=self.focal, pp=self.pp, mask=mask)
+            self.t_total = self.t_total + self.R_total @ t
             self.R_total = self.R_total @ R
 
         if len(good_new) < 200:
             self.prev_pts = cv2.goodFeaturesToTrack(gray_img, maxCorners=1000, qualityLevel=0.01, minDistance=10)
         else:
             self.prev_pts = good_new.reshape(-1, 1, 2)
-            
+
         self.prev_gray = gray_img
         self.frame_idx += 1
-        
         return self.t_total.ravel().copy(), good_old, good_new
+
 
 # ── Camera Motion Detector ──────────────────────────────────
 class CameraMotionDetector:
-    def __init__(self, threshold=1.5):
+    def __init__(self, threshold=3.0):
         self.threshold = threshold
         self.prev_gray = None
         self.prev_pts = None
@@ -178,26 +146,42 @@ class CameraMotionDetector:
                 self.prev_gray = gray
                 return False, 0.0
 
-        curr_pts, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, self.prev_pts, None)
-        
+        curr_pts, status, _ = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, self.prev_pts, None)
         if curr_pts is None or status is None:
             self.prev_gray = gray
             return False, 0.0
 
         good_old = self.prev_pts[status == 1]
         good_new = curr_pts[status == 1]
-        
+
         if len(good_old) == 0:
             self.prev_gray = gray
             return False, 0.0
 
         displacements = np.linalg.norm(good_new - good_old, axis=1)
         median_disp = float(np.median(displacements))
-        
         self.prev_gray = gray
         self.prev_pts = good_new.reshape(-1, 1, 2)
-
         return median_disp > self.threshold, median_disp
+
+
+def send_frame(placeholder, frame_bgr, canvas_bgr, width, height, frame_idx, total_frames, motion_mag, is_moving):
+    """Encode frame as JPEG bytes and send to Streamlit placeholder for live update."""
+    display_h = 360
+    display_w_vid = int(width * display_h / height)
+
+    vid_small = cv2.resize(frame_bgr, (display_w_vid, display_h))
+    canvas_small = cv2.resize(canvas_bgr, (display_h, display_h))
+
+    combined = np.hstack([vid_small, canvas_small])
+    combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
+
+    pil_img = PILImage.fromarray(combined_rgb)
+    buf = io.BytesIO()
+    pil_img.save(buf, format="JPEG", quality=75)
+    buf.seek(0)
+
+    placeholder.image(buf, use_container_width=True)
 
 
 # ── Header ───────────────────────────────────────────────────
@@ -205,19 +189,9 @@ st.title("🎯 Adaptive Tracker & VO")
 st.markdown(
     "<p style='color: #94a3b8; font-size: 1.1rem; margin-top: -10px;'>"
     "Upload any video. If the camera is <b>stable</b>, it detects and tracks moving objects. "
-    "If the camera is <b>moving</b>, it maps the camera's trajectory environment.</p>",
+    "If the camera is <b>moving</b>, it maps the camera's trajectory.</p>",
     unsafe_allow_html=True
 )
-
-# ── Default Parameters ──────────────────────────
-min_area = 500
-max_area = 100000
-max_distance = 150
-max_missed = 15
-bg_history = 500
-var_threshold = 50
-trail_length = 0
-frame_skip = 1
 
 # ── Main Area ────────────────────────────────────────────────
 uploaded = st.file_uploader("📁 Drop your video here", type=['mp4', 'avi', 'mov', 'mkv'])
@@ -250,50 +224,44 @@ if uploaded is not None:
                     f"<div class='stat-label'>Duration</div></div>", unsafe_allow_html=True)
 
     st.markdown("---")
-
     start_col1, _, _ = st.columns([1, 1, 3])
     with start_col1:
         start = st.button("▶️ Start Adaptive Engine", use_container_width=True)
 
     if start:
-        st.markdown("### 🎬 Live Feed: Adaptive Architecture")
-        progress_bar = st.progress(0, text="Initializing Engine...")
+        st.markdown("### 🎬 Live Feed")
+        progress_bar = st.progress(0, text="Initializing...")
         img_display = st.empty()
 
-        # Engine Init
+        # ── Engine Init ──
         KalmanTrack.reset_id_counter()
         tracker = MultiObjectTracker(
-            min_area=min_area, max_area=max_area,
-            max_distance=max_distance, max_missed=max_missed,
-            history=bg_history, var_threshold=var_threshold,
-            trail_length=trail_length
+            min_area=500, max_area=100000,
+            max_distance=150, max_missed=15,
+            history=500, var_threshold=50,
+            trail_length=0
         )
-        
-        focal = float(width)
-        pp = (width/2.0, height/2.0)
-        vo = MonoVisualOdometry(focal, pp)
-        motion_detector = CameraMotionDetector(threshold=1.5)
+        vo = MonoVisualOdometry(float(width), (width / 2.0, height / 2.0))
+        motion_detector = CameraMotionDetector(threshold=3.0)
 
         cap = cv2.VideoCapture(tfile.name)
 
-        # Unified Display Config
-        traj_h = height
-        traj_w = height  
+        # ── Canvas setup ──
+        traj_size = height
         scale_draw_vo = 10.0
-        
-        vo_canvas = np.zeros((traj_h, traj_w, 3), dtype=np.uint8)
-        cx_canvas, cy_canvas = traj_w//2, traj_h - 100
 
-        # Accumulating canvas for all stable object tracks
-        global_obj_canvas = np.zeros((traj_h, traj_w, 3), dtype=np.uint8)
-        cv2.putText(global_obj_canvas, "All Object Trajectories", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        # Persistent VO canvas — only trajectory dots are drawn here
+        vo_canvas = np.zeros((traj_size, traj_size, 3), dtype=np.uint8)
+        cx_canvas, cy_canvas = traj_size // 2, traj_size - 100
+
+        # Persistent object trajectory canvas — only lines & ID labels drawn here, NO title text
+        global_obj_canvas = np.zeros((traj_size, traj_size, 3), dtype=np.uint8)
         labeled_ids = set()
 
+        scale_x = traj_size / width
+        scale_y = traj_size / height
+
         frame_idx = 0
-        max_active = 0
-        
-        # Increase motion threshold to be less sensitive to minor shakes
-        motion_detector = CameraMotionDetector(threshold=3.0) 
 
         while True:
             ret, frame = cap.read()
@@ -301,120 +269,121 @@ if uploaded is not None:
                 break
             frame_idx += 1
 
-            # Skip every other frame to speed up processing and improve live playback feel
+            # Process every 2nd frame for speed
             if frame_idx % 2 != 0:
                 continue
 
-            # 1. Detect Motion
             is_moving, motion_mag = motion_detector.is_moving(frame)
-
             annotated = frame.copy()
-            
-            # Setup canvases for this frame
-            scale_x = traj_w / width
-            scale_y = traj_h / height
 
             if is_moving:
-                # ── MOVING CAMERA MODE (Visual Odometry) ──
+                # ── MOVING: Visual Odometry ──
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                pos, p_old, p_new = vo.process_frame(gray)
-                
+                pos, _, p_new = vo.process_frame(gray)
+
                 if p_new is not None:
                     for p in p_new:
-                        x, y = int(p[0]), int(p[1])
-                        cv2.circle(annotated, (x, y), 3, (0, 255, 0), -1)
+                        cv2.circle(annotated, (int(p[0]), int(p[1])), 3, (0, 255, 0), -1)
 
                 draw_x = int(cx_canvas + pos[0] * scale_draw_vo)
                 draw_y = int(cy_canvas - pos[2] * scale_draw_vo)
 
-                # Auto shift canvas if VO goes out of bounds
                 margin = 50
                 shift_x = shift_y = 0
-                if draw_x < margin: shift_x = margin + 50 - draw_x
-                elif draw_x > traj_w - margin: shift_x = (traj_w - margin - 50) - draw_x
-                if draw_y < margin: shift_y = margin + 50 - draw_y
-                elif draw_y > traj_h - margin: shift_y = (traj_h - margin - 50) - draw_y
-                
+                if draw_x < margin:            shift_x = margin + 50 - draw_x
+                elif draw_x > traj_size - margin: shift_x = (traj_size - margin - 50) - draw_x
+                if draw_y < margin:            shift_y = margin + 50 - draw_y
+                elif draw_y > traj_size - margin: shift_y = (traj_size - margin - 50) - draw_y
+
                 if shift_x != 0 or shift_y != 0:
                     M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
-                    vo_canvas = cv2.warpAffine(vo_canvas, M, (traj_w, traj_h))
+                    vo_canvas = cv2.warpAffine(vo_canvas, M, (traj_size, traj_size))
                     cx_canvas += shift_x
                     cy_canvas += shift_y
                     draw_x += int(shift_x)
                     draw_y += int(shift_y)
 
-                draw_x = np.clip(draw_x, 2, traj_w-2)
-                draw_y = np.clip(draw_y, 2, traj_h-2)
+                draw_x = int(np.clip(draw_x, 2, traj_size - 2))
+                draw_y = int(np.clip(draw_y, 2, traj_size - 2))
 
                 if vo.frame_idx <= 2:
                     cv2.circle(vo_canvas, (draw_x, draw_y), 6, (0, 255, 0), 2)
-                    cv2.putText(vo_canvas, 'START', (draw_x+8, draw_y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
-                
+                    cv2.putText(vo_canvas, 'START', (draw_x + 8, draw_y - 8),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
                 cv2.circle(vo_canvas, (draw_x, draw_y), 2, (100, 255, 100), -1)
-                
+
+                # Build display canvas: copy persistent + draw title fresh (no overlap)
                 live_canvas = vo_canvas.copy()
-                cv2.putText(live_canvas, "Camera Trajectory (VO)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                hud_status = f"MOVING ({motion_mag:.1f}px)"
-                hud_color = (0, 100, 255) 
+                cv2.rectangle(live_canvas, (0, 0), (350, 50), (0, 0, 0), -1)
+                cv2.putText(live_canvas, "Camera Trajectory (VO)", (10, 35),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (100, 255, 100), 2)
+
+                hud_text = f"MOVING  {motion_mag:.1f}px"
+                hud_color = (50, 120, 255)
 
             else:
-                # ── STABLE CAMERA MODE (Object Tracking) ──
+                # ── STABLE: Object Tracking ──
                 annotated, _, stats = tracker.process_frame(frame)
-                
-                # Accumulate the tracks into the global history
+
+                # Accumulate segments into persistent canvas (no title text here)
                 for t in tracker.tracks:
-                    if len(t.trajectory) >= 2:
-                        latest_pts = [(int(p[0]*scale_x), int(p[1]*scale_y)) for p in t.trajectory[-2:]]
-                        cv2.polylines(global_obj_canvas, [np.array(latest_pts)], False, t.color, 1, cv2.LINE_AA)
-                        
-                        if t.track_id not in labeled_ids and len(t.trajectory) > 10:
-                            label_pos = (int(t.trajectory[0][0]*scale_x), int(t.trajectory[0][1]*scale_y))
-                            cv2.putText(global_obj_canvas, f"ID:{t.track_id}", (label_pos[0]+5, label_pos[1]-5),
+                    traj = t.trajectory
+                    if len(traj) >= 2:
+                        pts = [(int(p[0] * scale_x), int(p[1] * scale_y)) for p in traj[-2:]]
+                        cv2.polylines(global_obj_canvas, [np.array(pts)], False, t.color, 1, cv2.LINE_AA)
+
+                        if t.track_id not in labeled_ids and len(traj) > 10:
+                            lp = (int(traj[0][0] * scale_x), int(traj[0][1] * scale_y))
+                            cv2.putText(global_obj_canvas, f"ID:{t.track_id}",
+                                        (lp[0] + 5, lp[1] - 5),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, t.color, 1, cv2.LINE_AA)
                             labeled_ids.add(t.track_id)
 
+                # Build display canvas: copy persistent + draw title + active dots fresh
                 live_canvas = global_obj_canvas.copy()
-                # Draw active heads on top
+                cv2.rectangle(live_canvas, (0, 0), (370, 50), (0, 0, 0), -1)
+                cv2.putText(live_canvas, "Object Trajectories (MOG2)", (10, 35),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+
                 for t in tracker.tracks:
                     if len(t.trajectory) > 0:
                         cp = t.trajectory[-1]
-                        cpt = (int(cp[0]*scale_x), int(cp[1]*scale_y))
-                        cv2.circle(live_canvas, cpt, 5, t.color, -1)
+                        cv2.circle(live_canvas,
+                                   (int(cp[0] * scale_x), int(cp[1] * scale_y)),
+                                   5, t.color, -1)
 
-                cv2.putText(live_canvas, "Object Trajectories (MOG2)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                hud_status = f"STABLE ({motion_mag:.1f}px)"
-                hud_color = (100, 255, 100) 
-                
-            # Global HUD
-            cv2.rectangle(annotated, (0,0), (300, 80), (0,0,0), -1)
-            cv2.putText(annotated, hud_status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, hud_color, 2)
-            cv2.putText(annotated, f"Frame {frame_idx}/{total_frames}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                hud_text = f"STABLE  {motion_mag:.1f}px"
+                hud_color = (50, 220, 80)
 
-            # Frame Composite
-            # Downscale for faster network transmission to ensure "live" feel
-            display_h = 480
+            # ── HUD on video frame ──
+            cv2.rectangle(annotated, (0, 0), (320, 90), (0, 0, 0), -1)
+            cv2.putText(annotated, hud_text, (10, 35),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, hud_color, 2)
+            cv2.putText(annotated, f"Frame {frame_idx} / {total_frames}", (10, 68),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 220, 220), 1)
+
+            # ── Encode as JPEG bytes & push to browser ──
+            display_h = 360
             display_w_vid = int(width * display_h / height)
-            
-            vid_small = cv2.resize(annotated, (display_w_vid, display_h))
-            canvas_small = cv2.resize(live_canvas, (display_h, display_h)) # square canvas
-            
-            combined = np.hstack([vid_small, canvas_small])
+
+            vid_small    = cv2.resize(annotated,   (display_w_vid, display_h))
+            canvas_small = cv2.resize(live_canvas, (display_h, display_h))
+
+            combined     = np.hstack([vid_small, canvas_small])
             combined_rgb = cv2.cvtColor(combined, cv2.COLOR_BGR2RGB)
-            
-            # Use a unique key per update if possible, or just ensure caption changes
-            img_display.image(
-                combined_rgb, 
-                channels="RGB", 
-                use_container_width=True, 
-                caption=f"⚡ LIVE ENGINE | Frame {frame_idx}/{total_frames} | Motion: {motion_mag:.1f}"
-            )
-            
-            # Update progress bar
-            if frame_idx % 20 == 0:
-                progress_bar.progress(min(frame_idx / total_frames, 1.0), text=f"Processing: {frame_idx}/{total_frames}")
-            
-            import time
-            time.sleep(0.05) 
+
+            buf = io.BytesIO()
+            PILImage.fromarray(combined_rgb).save(buf, format="JPEG", quality=75)
+            buf.seek(0)
+            img_display.image(buf, use_container_width=True)
+
+            # Progress bar every 10 frames
+            if frame_idx % 10 == 0:
+                progress_bar.progress(
+                    min(frame_idx / total_frames, 1.0),
+                    text=f"Processing: {frame_idx} / {total_frames}"
+                )
 
         cap.release()
         os.remove(tfile.name)
@@ -423,7 +392,7 @@ if uploaded is not None:
         st.markdown("---")
         st.markdown("### 📥 Download Trajectory Maps")
         col1, col2 = st.columns(2)
-        
+
         ret_vo, buffer_vo = cv2.imencode('.png', vo_canvas)
         if ret_vo:
             col1.download_button(
@@ -433,7 +402,7 @@ if uploaded is not None:
                 mime="image/png",
                 use_container_width=True
             )
-            
+
         ret_obj, buffer_obj = cv2.imencode('.png', global_obj_canvas)
         if ret_obj:
             col2.download_button(
