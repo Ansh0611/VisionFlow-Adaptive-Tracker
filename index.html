@@ -3,186 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VisionFlow Blog — Insights from the Team</title>
-    <meta name="description" content="Explore insights from the VisionFlow Adaptive Tracker team. Four unique perspectives on adaptive computer vision, object tracking, and visual odometry.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- Marked.js for Markdown rendering -->
+    <title>VisionFlow Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
-    <!-- Highlight.js for code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Ambient Background -->
-    <div class="ambient-bg">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
-    </div>
+    <header class="header">
+        <h1 class="site-title"><a href="#" id="home-link">VisionFlow Blog</a></h1>
+        <p class="site-desc">Insights from the Adaptive Tracker team.</p>
+    </header>
 
-    <!-- Navigation -->
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="#" class="nav-logo" id="nav-logo-link">
-                <span class="logo-icon">◎</span>
-                <span class="logo-text">VisionFlow<span class="logo-accent">Blog</span></span>
-            </a>
-            <div class="nav-links" id="nav-links">
-                <a href="#" class="nav-link active" data-section="home" id="nav-home">Home</a>
-                <a href="#" class="nav-link" data-author="lakshit-mehta" id="nav-lakshit">Lakshit</a>
-                <a href="#" class="nav-link" data-author="siddhi-pateriya" id="nav-siddhi">Siddhi</a>
-                <a href="#" class="nav-link" data-author="chirag-taneja" id="nav-chirag">Chirag</a>
-                <a href="#" class="nav-link" data-author="ansh-sidana" id="nav-ansh">Ansh</a>
-            </div>
-            <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation menu">
-                <span></span><span></span><span></span>
-            </button>
+    <main id="main-content">
+        <!-- Home View: List of Posts -->
+        <div id="home-view">
+            <ul class="post-list">
+                <li>
+                    <a href="#" class="post-link" data-author="lakshit-mehta">
+                        <h2>The Mathematics of Pursuit</h2>
+                        <p>Lakshit Mehta — Algorithmic Architecture</p>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="post-link" data-author="siddhi-pateriya">
+                        <h2>Reconstructing the Unseen</h2>
+                        <p>Siddhi Pateriya — Pose Estimation</p>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="post-link" data-author="chirag-taneja">
+                        <h2>An Adaptive Architecture</h2>
+                        <p>Chirag Taneja — System Design</p>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="post-link" data-author="ansh-sidana">
+                        <h2>The First Decision</h2>
+                        <p>Ansh Sidana — Motion Analysis</p>
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
 
-    <!-- Hero / Home Section -->
-    <main>
-        <section class="hero-section" id="home-section">
-            <div class="hero-content">
-                <div class="hero-badge">🔬 Computer Vision Research Blog</div>
-                <h1 class="hero-title">
-                    Adaptive Vision.<br>
-                    <span class="gradient-text">Four Perspectives.</span>
-                </h1>
-                <p class="hero-subtitle">
-                    Meet the minds behind the <strong>VisionFlow Adaptive Tracker</strong> — a unified CV system 
-                    that intelligently switches between multi-object tracking and visual odometry. 
-                    Each contributor shares their unique insight into the project's methodology and necessity.
-                </p>
-                <div class="hero-stats">
-                    <div class="stat-pill">
-                        <span class="stat-value">2</span>
-                        <span class="stat-label">Pipelines</span>
-                    </div>
-                    <div class="stat-pill">
-                        <span class="stat-value">4</span>
-                        <span class="stat-label">Contributors</span>
-                    </div>
-                    <div class="stat-pill">
-                        <span class="stat-value">5+</span>
-                        <span class="stat-label">Algorithms</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Author Cards Grid -->
-            <div class="authors-grid" id="authors-grid">
-                <!-- Card: Lakshit Mehta -->
-                <article class="author-card" data-author="lakshit-mehta" id="card-lakshit">
-                    <div class="card-glow glow-blue"></div>
-                    <div class="card-content">
-                        <div class="author-avatar avatar-blue">LM</div>
-                        <h2 class="author-name">Lakshit Mehta</h2>
-                        <p class="author-role">Algorithmic Architecture & Optimization</p>
-                        <p class="card-excerpt">
-                            Exploring the mathematical elegance of the Hungarian Algorithm and Kalman Filters 
-                            that power our multi-object tracking pipeline.
-                        </p>
-                        <div class="card-meta">
-                            <span class="read-time">📖 8 min read</span>
-                            <span class="card-tag">Algorithms</span>
-                        </div>
-                        <button class="read-btn" id="btn-read-lakshit">Read Insight →</button>
-                    </div>
-                </article>
-
-                <!-- Card: Siddhi Pateriya -->
-                <article class="author-card" data-author="siddhi-pateriya" id="card-siddhi">
-                    <div class="card-glow glow-purple"></div>
-                    <div class="card-content">
-                        <div class="author-avatar avatar-purple">SP</div>
-                        <h2 class="author-name">Siddhi Pateriya</h2>
-                        <p class="author-role">Geometric Vision & Pose Estimation</p>
-                        <p class="card-excerpt">
-                            Dissecting the Visual Odometry pipeline — from feature tracking to Essential 
-                            Matrix decomposition and camera trajectory reconstruction.
-                        </p>
-                        <div class="card-meta">
-                            <span class="read-time">📖 9 min read</span>
-                            <span class="card-tag">Visual Odometry</span>
-                        </div>
-                        <button class="read-btn" id="btn-read-siddhi">Read Insight →</button>
-                    </div>
-                </article>
-
-                <!-- Card: Chirag Taneja -->
-                <article class="author-card" data-author="chirag-taneja" id="card-chirag">
-                    <div class="card-glow glow-cyan"></div>
-                    <div class="card-content">
-                        <div class="author-avatar avatar-cyan">CT</div>
-                        <h2 class="author-name">Chirag Taneja</h2>
-                        <p class="author-role">System Design & Adaptive Architecture</p>
-                        <p class="card-excerpt">
-                            The philosophy behind a unified vision system — how adaptive switching, 
-                            real-time orchestration, and elegant UX come together.
-                        </p>
-                        <div class="card-meta">
-                            <span class="read-time">📖 10 min read</span>
-                            <span class="card-tag">Architecture</span>
-                        </div>
-                        <button class="read-btn" id="btn-read-chirag">Read Insight →</button>
-                    </div>
-                </article>
-
-                <!-- Card: Ansh Sidana -->
-                <article class="author-card" data-author="ansh-sidana" id="card-ansh">
-                    <div class="card-glow glow-green"></div>
-                    <div class="card-content">
-                        <div class="author-avatar avatar-green">AS</div>
-                        <h2 class="author-name">Ansh Sidana</h2>
-                        <p class="author-role">Motion Analysis & Scene Understanding</p>
-                        <p class="card-excerpt">
-                            Understanding scene dynamics through optical flow, MOG2 background subtraction, 
-                            and the critical decision boundary between static and moving worlds.
-                        </p>
-                        <div class="card-meta">
-                            <span class="read-time">📖 8 min read</span>
-                            <span class="card-tag">Detection</span>
-                        </div>
-                        <button class="read-btn" id="btn-read-ansh">Read Insight →</button>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <!-- Blog Post View -->
-        <section class="post-section hidden" id="post-section">
-            <button class="back-btn" id="back-btn">← Back to All Posts</button>
-            <article class="post-container" id="post-container">
-                <div class="post-header" id="post-header">
-                    <!-- Dynamically populated -->
-                </div>
-                <div class="post-body" id="post-body">
-                    <!-- Markdown rendered here -->
-                </div>
+        <!-- Post View -->
+        <div id="post-view" class="hidden">
+            <button id="back-btn" class="back-btn">← Back to posts</button>
+            <article id="post-content" class="post-content">
+                <!-- Markdown rendered here -->
             </article>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer" id="footer">
-        <div class="footer-content">
-            <p class="footer-text">
-                <span class="logo-icon">◎</span> VisionFlow Adaptive Tracker — 
-                <span class="footer-accent">MIT License</span> · Built with classical CV, zero deep learning.
-            </p>
-            <p class="footer-credits">Lakshit · Siddhi · Chirag · Ansh</p>
         </div>
-    </footer>
-
+    </main>
     <script src="script.js"></script>
 </body>
 </html>
